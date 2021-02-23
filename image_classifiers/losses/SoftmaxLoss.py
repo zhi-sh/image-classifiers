@@ -9,7 +9,7 @@ from image_classifiers import ImageClassifier
 
 class SoftmaxLoss(nn.Module):
     def __init__(self, model: ImageClassifier):
-        super(SoftmaxLoss, self).__init__()
+        super().__init__()
         self.model = model
         self.device = model.device
         self.loss_fct = nn.CrossEntropyLoss()
