@@ -11,6 +11,7 @@ class SoftmaxLoss(nn.Module):
     def __init__(self, model: ImageClassifier):
         super(SoftmaxLoss, self).__init__()
         self.model = model
+        self.device = model.device
         self.loss_fct = nn.CrossEntropyLoss()
 
     def forward(self, features: Tensor, labels: Tensor):
