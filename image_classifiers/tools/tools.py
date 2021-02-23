@@ -3,7 +3,7 @@
 # @Author   :zhi.liu
 
 # ------------------------------------------------------------------------------
-import os
+import os, pickle
 
 
 # --------------------------- 文件目录相关操作 -----------------------------------
@@ -28,3 +28,17 @@ def gather_files_by_ext(path, ext, files: list = None):
                 files.append(cur_path)
 
     return files
+
+
+def pkl_save(obj, fpath):
+    r'''对象序列化过程'''
+    with open(fpath, 'wb') as fw:
+        pickle.dump(obj, fw)
+
+
+def pkl_load(fpath):
+    r'''对象反序列化过程'''
+    assert os.path.isfile(fpath)
+    with open(fpath, 'rb') as fr:
+        obj = pickle.load(fr)
+    return obj
