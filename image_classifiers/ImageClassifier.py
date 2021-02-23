@@ -39,6 +39,7 @@ class ImageClassifier(nn.Sequential):
             logger.info(f'use pytorch device: {device}')
         self._target_device = torch.device(device)
 
+    # -------------------------------------- 训练方法 ------------------------------------------
     def fit(self, train_objectives: Iterable[Tuple[DataLoader, nn.Module]],
             evaluator: AbstractEvaluation = None,
             epochs: int = 1,
@@ -102,6 +103,9 @@ class ImageClassifier(nn.Sequential):
                         data = next(data_iterator)
 
                     features, labels = data
+                    features = features.to(self._target_device)
+                    labels = labels.to(self._target_device)
+
                     loss_value = loss_model(features, labels)
                     loss_value.backward()  # 反向传播
                     optimizer.step()  # 更新权重
@@ -138,6 +142,15 @@ class ImageClassifier(nn.Sequential):
 
         with open(os.path.join(path, 'config.json'), 'w') as fout:
             json.dump({'__version__': __version__}, fout, indent=2)
+
+    # --------------------------------------------- 模型属性 ----------------------------------------------------------
+    @property
+    def device(self) -> torch.device:
+        try:
+            return next(self.parameters()).device
+        except StopIteration:
+            # TODO nn.DataParaParallel compatibility
+            return torch.device('cuda') if torch.cuda.is_available() else torch.device('cpu')
 
     # --------------------------------------------- 内部函数 ----------------------------------------------------------
     def _eval_during_training(self, evaluator, output_path, save_best_model, epoch, steps):

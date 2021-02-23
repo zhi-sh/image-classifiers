@@ -38,6 +38,9 @@ class LabelAccuracyEvaluator(AbstractEvaluation):
         # 前向过程
         for step, batch in enumerate(tqdm(self.dataloader, desc='Evaluating')):
             features, label_ids = batch
+            features = features.to(model.device)
+            label_ids = label_ids.to(model.device)
+
             with torch.no_grad():
                 prediction = model(features)
 
