@@ -42,7 +42,6 @@ class LabelAccuracyEvaluator(AbstractEvaluation):
                 prediction = model(features)
 
             total += prediction.size(0)
-            print('\n', torch.argmax(prediction, dim=1).eq(label_ids.view(-1)).sum().item(), prediction.size(0))
             correct += torch.argmax(prediction, dim=1).eq(label_ids.view(-1)).sum().item()  # eq(a, b) 应确保 a, b 维度一致
 
         accuracy = correct / total
