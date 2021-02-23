@@ -12,7 +12,7 @@ from torch import nn
 from torch.utils.data import DataLoader
 from tqdm.notebook import trange
 from image_classifiers import __version__
-from image_classifiers.tools import tools
+from image_classifiers.tools import tools, utils
 from image_classifiers.evaluations import AbstractEvaluation
 
 logger = logging.getLogger(__name__)
@@ -26,12 +26,31 @@ class ImageClassifier(nn.Sequential):
         :param modules: 分层模型列表
         :param device: CPU or GPU, 默认自动探测
         '''
-        if model_path is not None:
-            raise ValueError(r'not implement!')
 
+        # 加载已训练的模型
+        if model_path is not None:
+            logger.info(f'load Image Classifier model from : {model_path}')
+            # 确认版本一致
+            with open(os.path.join(model_path, 'config.json')) as fin:
+                config = json.load(fin)
+                if config['__version__'] != __version__:
+                    logger.error(f'version of image classifier should be same!')
+
+            # 依次加载各层模型
+            with open(os.path.join(model_path, 'modules.json')) as fin:
+                contained_modules = json.load(fin)
+
+            modules = OrderedDict()
+            for module_config in contained_modules:
+                module_class = utils.import_from_string(module_config['type'])
+                module = module_class.load(os.path.join(model_path, module_config['path']))
+                modules[module_config['name']] = module
+
+        # 确保参数传递、或路径加载的modules为OrderedDict
         if (modules is not None) and not isinstance(modules, OrderedDict):
             modules = OrderedDict([(str(idx), module) for idx, module in enumerate(modules)])
 
+        # 使用父类，构造模型
         super().__init__(modules)
 
         if device is None:
@@ -68,7 +87,7 @@ class ImageClassifier(nn.Sequential):
         if steps_per_epoch is None or steps_per_epoch == 0:
             steps_per_epoch = min([len(dataloader) for dataloader in dataloaders])
 
-        # 为不同的训练对，提供不同的优化器
+        # 不同的训练对，提供不同的优化器
         optimizers = []
         for loss_model in loss_models:
             optimizer = optimizer_class(loss_model.parameters(), **optimizer_params)
@@ -143,6 +162,17 @@ class ImageClassifier(nn.Sequential):
         with open(os.path.join(path, 'config.json'), 'w') as fout:
             json.dump({'__version__': __version__}, fout, indent=2)
 
+    def predict(self, dataloader: DataLoader):
+        r'''模型推导'''
+        predictions = []
+        for batch in dataloader:
+            features, _ = batch
+            features = features.to(self.device)
+            output = self(features)
+            preds = torch.argmax(output, dim=1).numpy()
+            predictions.extend(list(preds))
+        return predictions
+
     # --------------------------------------------- 模型属性 ----------------------------------------------------------
     @property
     def device(self) -> torch.device:
@@ -156,7 +186,7 @@ class ImageClassifier(nn.Sequential):
     def _eval_during_training(self, evaluator, output_path, save_best_model, epoch, steps):
         if evaluator is not None:  # 如果存在评估实体，则进行评估模型的过程
             score = evaluator(self, output_path=output_path, epoch=epoch, steps=steps)
-            if score > self.best_score:
+            if score >= self.best_score:
                 self.best_score = score
                 if save_best_model:
                     self.save(output_path)
