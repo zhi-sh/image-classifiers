@@ -29,11 +29,10 @@ class OrientationDataset(Dataset):
         return img, torch.Tensor([self.img_df.iloc[index]['label']]).long()
 
     @classmethod
-    def load_dataset_from_path(cls, path: str, dev_size: int = 0):
+    def load_dataset_from_path(cls, path: str, le: LabelEncoder = None):
         r'''
         从目录加载数据, 目录结构为 Path/class_no./xxx.jpg
         :param path: 图像类别所在主目录
-        :param dev_size: 开发集比例
         :return: le, train_dataset, dev_dataset
         '''
 
@@ -41,10 +40,10 @@ class OrientationDataset(Dataset):
         image_paths = tools.gather_files_by_ext(path, ext='.png')
         df = pd.DataFrame({'path': image_paths})
         df['label'] = df['path'].apply(lambda x: x.split(r'/')[-2])
-        le = LabelEncoder()
-        df['label'] = le.fit_transform(df['label'])
-        if 0 < dev_size < 1:
-            train, dev = train_test_split(df, test_size=dev_size, stratify=df['label'])
-            return le, train, dev
+        if le is None:
+            le = LabelEncoder()
+            df['label'] = le.fit_transform(df['label'])
+            return le, df
         else:
-            return le, df, None
+            df['label'] = le.transform(df['label'])
+            return df
