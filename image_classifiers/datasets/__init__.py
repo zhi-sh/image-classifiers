@@ -3,4 +3,5 @@
 # @Author   :zhi.liu
 
 # ------------------------------------------------------------------------------
-from image_classifiers.datasets.OrientationDataset import OrientationDataset
+from image_classifiers.datasets.BalancedPairDataset import BalancedPairDataset
+from image_classifiers.datasets.CommonDataset import CommonDataset

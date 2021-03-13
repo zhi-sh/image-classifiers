@@ -10,7 +10,8 @@ from collections import OrderedDict
 import torch
 from torch import nn
 from torch.utils.data import DataLoader
-from tqdm.notebook import trange
+from tqdm import tqdm
+from tensorboardX import SummaryWriter
 from image_classifiers import __version__
 from image_classifiers.tools import tools, utils
 from image_classifiers.evaluations import AbstractEvaluation
@@ -57,6 +58,7 @@ class ImageClassifier(nn.Sequential):
             device = 'cuda' if torch.cuda.is_available() else 'cpu'
             logger.info(f'use pytorch device: {device}')
         self._target_device = torch.device(device)
+        self.round_counter = 0
 
     # -------------------------------------- 训练方法 ------------------------------------------
     def fit(self, train_objectives: Iterable[Tuple[DataLoader, nn.Module]],
@@ -68,12 +70,18 @@ class ImageClassifier(nn.Sequential):
             evaluation_steps: int = 0,
             output_path: str = None,
             save_best_model: bool = True,
+            early_stopped_thresh: int = 20,  # 早停法阈值
             ):
         self.to(self._target_device)
-        self.best_score = -99999999  # 默认得分，用以寻找最优模型
+        self.min_loss = 99999999  # 默认得分，用以寻找最优模型
+        self.writer = None
 
         # 若需要，确保输出目录存在, None则跳过
         tools.ensure_path_exist(output_path)
+        if output_path is not None:
+            log_path = os.path.join(output_path, 'logs')
+            tools.ensure_path_exist(log_path)
+            self.writer = SummaryWriter(logdir=log_path)
 
         # 获取所有数据加载器
         dataloaders = [dataloader for dataloader, _ in train_objectives]
@@ -99,7 +107,8 @@ class ImageClassifier(nn.Sequential):
 
         # 构造训练过程
         self._eval_during_training(evaluator, output_path, save_best_model, -1, -1)  # 初始基准
-        for epoch in trange(epochs, desc='Epoch'):
+        losses = []
+        for epoch in tqdm(range(epochs), desc='Epoch'):
             training_steps = 0  # 训练统计，用以计算何时评估模型
 
             # 每轮先更改模型模式，并清空梯度
@@ -107,7 +116,7 @@ class ImageClassifier(nn.Sequential):
                 loss_model.zero_grad()
                 loss_model.train()
 
-            for _ in trange(steps_per_epoch, desc='Iteration', smoothing=0.05):
+            for _ in tqdm(range(steps_per_epoch), desc='Iteration'):
                 for train_idx in range(num_train_objectives):
                     loss_model = loss_models[train_idx]
                     optimizer = optimizers[train_idx]
@@ -121,14 +130,20 @@ class ImageClassifier(nn.Sequential):
                         data_iterators[train_idx] = data_iterator
                         data = next(data_iterator)
 
+                    # 数据
                     features, labels = data
-                    features = features.to(self._target_device)
+                    if isinstance(features, list):  # for simanse network
+                        for i in range(len(features)):
+                            features[i] = features[i].to(self._target_device)  # CPU or GPU
+                    else:  # for common network
+                        features = features.to(self._target_device)
                     labels = labels.to(self._target_device)
 
                     loss_value = loss_model(features, labels)
                     loss_value.backward()  # 反向传播
                     optimizer.step()  # 更新权重
                     optimizer.zero_grad()  # 清空梯度
+                    losses.append(loss_value.item())  # 收集训练损失
 
                 training_steps += 1
                 if (evaluation_steps > 0) and (training_steps % evaluation_steps == 0):
@@ -138,7 +153,24 @@ class ImageClassifier(nn.Sequential):
                         loss_model.train()
 
             # 每轮最后评估一次模型
-            self._eval_during_training(evaluator, output_path, save_best_model, epoch, -1)
+            score, valid_loss = self._eval_during_training(evaluator, output_path, save_best_model, epoch, -1)
+
+            # TensorBoard记录训练数据
+            if self.writer is not None:
+                if losses:
+                    self.writer.add_scalar('train_loss', sum(losses) / len(losses), epoch)
+                if score is not None:
+                    self.writer.add_scalar('valid_score', score, epoch)
+                    self.writer.add_scalar('valid_loss', valid_loss, epoch)
+
+            # 探测是否需要停止训练（早停法）
+            if self.round_counter > early_stopped_thresh:
+                logger.info(f'early stopped at epoch {epoch + 1} / {epochs}')
+                break
+
+        # 关闭TensorBoard
+        if self.writer is not None:
+            self.writer.close()
 
     def save(self, path: str):
         r'''保存模型'''
@@ -185,8 +217,12 @@ class ImageClassifier(nn.Sequential):
     # --------------------------------------------- 内部函数 ----------------------------------------------------------
     def _eval_during_training(self, evaluator, output_path, save_best_model, epoch, steps):
         if evaluator is not None:  # 如果存在评估实体，则进行评估模型的过程
-            score = evaluator(self, output_path=output_path, epoch=epoch, steps=steps)
-            if score >= self.best_score:
-                self.best_score = score
+            score, loss = evaluator(self, output_path=output_path, epoch=epoch, steps=steps)
+            if loss <= self.min_loss:
+                self.min_loss = loss
+                self.round_counter = 0
                 if save_best_model:
                     self.save(output_path)
+            else:
+                self.round_counter += 1
+            return score

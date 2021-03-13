@@ -4,3 +4,4 @@
 
 # ------------------------------------------------------------------------------
 from image_classifiers.losses.SoftmaxLoss import SoftmaxLoss
+from image_classifiers.losses.ContrastiveLoss import ContrastiveLoss

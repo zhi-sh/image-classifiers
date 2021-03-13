@@ -3,5 +3,5 @@
 # @Author   :zhi.liu
 
 # ------------------------------------------------------------------------------
-from image_classifiers.models.Resnet18FT import Resnet18FT
-
+from image_classifiers.models.BaseCNN import BaseCNN
+from image_classifiers.models.SiameseCNN import SiameseCNN
