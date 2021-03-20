@@ -8,12 +8,12 @@ import torch
 from tqdm import tqdm
 from torch import nn
 from torch.utils.data import DataLoader
-from image_classifiers.evaluations import AbstractEvaluation
+from image_classifiers.evaluations import AbstractEvaluator
 
 logger = logging.getLogger(__name__)
 
 
-class LabelAccuracyEvaluator(AbstractEvaluation):
+class LabelAccuracyEvaluator(AbstractEvaluator):
     def __init__(self, dataloader: DataLoader, name: str = ''):
         self.dataloader = dataloader
         self.name = name

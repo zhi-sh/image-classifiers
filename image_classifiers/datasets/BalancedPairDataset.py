@@ -9,11 +9,12 @@ import random
 from PIL import Image
 
 import torch
+import numpy as np
 from torch.utils.data import Dataset
 
 
 class BalancedPairDataset(Dataset):
-    def __init__(self, root, transform=None, target_transform=None, single_size=500):
+    def __init__(self, root, transform=None, target_transform=None, single_size=500, need_mean_picture=False):
         self.root = root
         self.transform = transform
         self.target_transform = target_transform
@@ -21,6 +22,8 @@ class BalancedPairDataset(Dataset):
 
         self.label2path_dict = self._label2path_dict()
         self.data = self._balanced_sample()
+        if need_mean_picture:
+            self.generate_mean_picture()
 
     def __getitem__(self, index):
         img_paths, target = self.data[index]
@@ -34,6 +37,21 @@ class BalancedPairDataset(Dataset):
         if self.target_transform is not None:
             target = self.target_transform(target)
         return img_array, torch.tensor(target)
+
+    def generate_mean_picture(self):
+        pic_root = os.path.split(self.root)[0]
+        pic = {}
+        for cate, paths in self.label2path_dict.items():
+            for path in paths:
+                img = Image.open(path).convert('L')
+                img = torch.from_numpy(np.asarray(img, dtype=float))
+                pic.setdefault(cate, []).append(img)
+
+        for cate, image_array in pic.items():
+            img_tensor = torch.stack(image_array, dim=0)
+            mean_tensor = torch.mean(img_tensor, dim=0)
+            mean_image = Image.fromarray(mean_tensor.numpy().astype('uint8'))
+            mean_image.save(f'{pic_root}/{cate}.png')
 
     def __len__(self):
         return len(self.data)

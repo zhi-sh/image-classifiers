@@ -3,5 +3,6 @@
 # @Author   :zhi.liu
 
 # ------------------------------------------------------------------------------
+from image_classifiers.models.AbstractModel import AbstractModel
 from image_classifiers.models.BaseCNN import BaseCNN
 from image_classifiers.models.SiameseCNN import SiameseCNN

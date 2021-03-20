@@ -3,5 +3,6 @@
 # @Author   :zhi.liu
 
 # ------------------------------------------------------------------------------
-from image_classifiers.evaluations.AbstractEvaluation import AbstractEvaluation
+from image_classifiers.evaluations.AbstractEvaluator import AbstractEvaluator
+from image_classifiers.evaluations.AccuracyEvaluator import AccuracyEvaluator
 from image_classifiers.evaluations.LabelAccuracyEvaluator import LabelAccuracyEvaluator
