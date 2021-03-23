@@ -28,7 +28,7 @@ class CommonDataset(Dataset):
     def __getitem__(self, index):
         if self.has_label:
             img_path, target = self.data[index]
-            img = Image.open(img_path).convert('RGB')
+            img = Image.open(img_path).convert('L')
             if self.transform is not None:
                 img = self.transform(img)
             if self.target_transform is not None:
@@ -36,7 +36,7 @@ class CommonDataset(Dataset):
             return img, torch.tensor(target)
         else:
             img_path = self.data[index]
-            img = Image.open(img_path).convert('RGB')
+            img = Image.open(img_path).convert('L')
             if self.transform is not None:
                 img = self.transform(img)
             return img

@@ -3,10 +3,9 @@
 # @Author   :zhi.liu
 
 # ------------------------------------------------------------------------------
-import logging, os
+import logging
 import torch
 from tqdm import tqdm
-from torch import nn
 from torch.utils.data import DataLoader
 from image_classifiers.evaluations import AbstractEvaluator
 
@@ -33,9 +32,9 @@ class AccuracyEvaluator(AbstractEvaluator):
         for step, batch in enumerate(tqdm(self.dataloader, desc='Evaluating')):
             features, labels = clf.batch_to_device(batch)
             with torch.no_grad():
-                loss, preds = self.loss_model.forward(features, labels, need_metric=True)
+                loss, correct_items = self.loss_model.forward(features, labels, need_metric=True)
                 losses.append(loss.item())
-                correct += preds
+                correct += correct_items
 
         accuracy = correct / total
         eval_loss = sum(losses) / total

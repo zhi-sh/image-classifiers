@@ -5,13 +5,12 @@
 # ------------------------------------------------------------------------------
 import torch
 from torch import nn
-from image_classifiers import ImageClassifier
 
 
 class ContrastiveLoss(nn.Module):
     r''' 适用于 Simanese Networks '''
 
-    def __init__(self, model: ImageClassifier):
+    def __init__(self, model):
         super(ContrastiveLoss, self).__init__()
         self.model = model
         self.loss_fct = nn.CrossEntropyLoss()

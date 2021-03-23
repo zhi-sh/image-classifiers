@@ -52,7 +52,7 @@ class ImageClassifier:
             optimizer = self.model.get_optimizer()
 
         score, eval_loss = self._eval_during_training(evaluator, output_path, -1)
-        print(f"Random evaluation: valid loss: {eval_loss}, valid score: {score}\n")
+        print(f"\n\nRandom evaluation: valid loss: {eval_loss}, valid score: {score}")
         for epoch in range(epochs):
             losses = []
 
@@ -69,7 +69,7 @@ class ImageClassifier:
                 progress_bar.set_description(f"Epoch: {epoch} train loss: {np.sum(losses) / len(train_loader.dataset)}")
 
             score, eval_loss = self._eval_during_training(evaluator, output_path, epoch)
-            print(f"Fine tune model at Epoch: {epoch}, train loss: {np.sum(losses) / len(train_loader.dataset):.6f}, valid loss: {eval_loss:.6f}, valid metrics: {score:.6f}\n")
+            print(f"\nFine tune model at Epoch: {epoch}, train loss: {np.sum(losses) / len(train_loader.dataset):.6f}, valid loss: {eval_loss:.6f}, valid metrics: {score:.6f}")
 
             if self.round_counter > early_stopped_thresh:
                 break
