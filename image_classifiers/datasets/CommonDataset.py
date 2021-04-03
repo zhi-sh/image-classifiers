@@ -4,6 +4,7 @@
 
 # ------------------------------------------------------------------------------
 import os
+import json
 from PIL import Image
 from typing import Union
 import torch
@@ -21,6 +22,7 @@ class CommonDataset(Dataset):
             self.label2path_dict = self._label2path_dict()
             self.label2ix = {v: i for i, v in enumerate(list(self.label2path_dict.keys()))}
             self.data = self._gather_data_list()
+            self._save_label2ix(root_or_list)
 
         self.transform = transform
         self.target_transform = target_transform
@@ -43,6 +45,11 @@ class CommonDataset(Dataset):
 
     def __len__(self):
         return len(self.data)
+
+    def _save_label2ix(self, data_root):
+        label_path = os.path.split(data_root)[0]
+        with open(f"{label_path}/label2ix.json", 'w', encoding='utf-8') as fw:
+            json.dump(self.label2ix, fw)
 
     def _label2path_dict(self):
         r'''

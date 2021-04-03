@@ -74,6 +74,15 @@ class ImageClassifier:
             if self.round_counter > early_stopped_thresh:
                 break
 
+    def predict(self, dataloader):
+        pred_list = []
+        for data in dataloader:
+            output = self.model(data)
+            pred = output.data.max(1, keepdim=True)[1]
+            pred_list.append(pred.cpu().detach().numpy())
+        pred_list = np.concatenate(pred_list)
+        return pred_list.reshape(-1)
+
     def save(self, path: str):
         r'''保存模型'''
         if path is None:
